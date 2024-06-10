@@ -1,5 +1,5 @@
 import scala.swing.event.ButtonClicked
-import scala.swing.{BoxPanel, Button, FlowPanel, Orientation}
+import scala.swing.{BoxPanel, Button, CheckBox, FlowPanel, Orientation}
 import DialogUtils._
 
 
@@ -18,6 +18,8 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
 
   val toggleCell = new Button("Toogle Cell")
   val clearRectangle = new Button("Clear Rectangle")
+  val option1Checkbox = new CheckBox("Transparent")
+  val option2Checkbox = new CheckBox("Extendable")
   val rotationButton = new Button("Rotate Cell")
 
 
@@ -39,6 +41,9 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
   contents += new FlowPanel {
     contents += toggleCell
     contents += clearRectangle
+    // Add two new checkboxes to the panel
+    contents += option1Checkbox
+    contents += option2Checkbox
     contents += rotationButton
   }
 
@@ -118,13 +123,55 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
           println("None inserted")
       }
     case ButtonClicked(`rotationButton`) =>
-      //val rotationWithExtensions = new NonTransparentOp with ExtendableOp with LeftRotation {}
-      //val rotationWithExtensions = new NonTransparentOp with ExtendableOp with VerticalSymetry {}
-      val rotationWithExtensions = new HorizontalSymetry {}
-      val rotic = new NonTransparentOp with ExtendableOp {}
-      //val rotationWithExtensions = new NonTransparentOp with ExtendableOp with rotic.classname {}
+
+      val rotationWithExtensions = new RightRotation {}
+      //val rotationWithExtensions = new RightDiagonalSymetry {}
+      var rotic = new MatrixOperation {}
+      //var roticCh = new MatrixOperation {}
+
+      (option1Checkbox.selected, option2Checkbox.selected) match {
+        case (true, true) =>
+          rotic = new TransparentOp with ExtendableOp {}
+          //roticCh = new ExtendableOp {}
+        case (true, false) =>
+          rotic = new TransparentOp with InextendibleOp {}
+          //roticCh = new InextendibleOp {}
+        case (false, true) =>
+          rotic = new NonTransparentOp with ExtendableOp {}
+          // = new ExtendableOp {}
+        case (false, false) =>
+          rotic = new NonTransparentOp with InextendibleOp {}
+          //roticCh = new InextendibleOp {}
+      }
+
+      val rectCh = new MyRectangle(game.grid, 3, 1, 3, 3)
       val rect = new MyRectangle(game.grid, 3, 1, 3, 3)
-      rotationWithExtensions.extendMe(rotic, this, 0, 0, rect, true)
+
+
+      var rowCENTER = 0
+      var colCENTER = 0
+
+
+      val newRectCh = rotationWithExtensions.extendMe(rotic, this, rowCENTER, colCENTER, rectCh, true, false)
+
+      if(newRectCh.checkRect()){
+        //val newRect = rotationWithExtensions.extendMe(rotic, this, 0, 0, rect, true,true)
+        newRectCh.addToGame(this)
+        //druga
+        //val finalRect = rotationWithExtensions.extendMe(rotic, this, newRect.rowChange + 0, newRect.colChange + 0, newRect, true, true)
+
+        println("KITA  " + newRectCh.rowChange + " " + newRectCh.colChange)
+        rowCENTER = newRectCh.rowChange
+        colCENTER = newRectCh.colChange
+        newRectCh.resetChangeNums()
+        //newRectCh.printRect()
+
+        val nextRect = rotationWithExtensions.extendMe(rotic, this, rowCENTER, colCENTER, newRectCh, true, false)
+        nextRect.addToGame(this)
+        //finalRect.printRect()
+      }
+
+
   }
 
   def addFirstRow(): Unit = {

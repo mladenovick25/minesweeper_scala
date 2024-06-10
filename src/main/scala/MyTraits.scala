@@ -1,37 +1,65 @@
 
 trait MatrixOperation {
-  def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false): Unit = {
+  def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
     println("super " +   controlMatrix.getGame().grid(rowNew)(colNew).isMine)
+  }
+
+  def isExtendible(): Boolean = {
+    true
   }
 }
 
 trait ExtendableOp extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false): Unit = {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
 
-    while (rowNew >= controlMatrix.getGame().height){
-      controlMatrix.addLastRow()
+    if (rowNew >= controlMatrix.getGame().height) {
+      //if (changer) controlMatrix.addLastRow()
+      rect.addToRow(rowNew - (controlMatrix.getGame().height - 1), false)
+    }
+    if (rowNew < 0) {
+      //if (changer) controlMatrix.addFirstRow()
+      rect.addToRow(0 - rowNew, true)
+    }
+    if (colNew >= controlMatrix.getGame().width) {
+      //if (changer) controlMatrix.addLastColumn()
+      rect.addToCol(colNew - (controlMatrix.getGame().width - 1), false)
+    }
+    if (colNew < 0) {
+      //if (changer) controlMatrix.addFirstColumn()
+      rect.addToCol(0 - colNew, true)
+    }
+
+    super.operate(controlMatrix, 0 - rowNew, 0 - colNew, rect, tran, changer)
+
+    /*while (rowNew >= controlMatrix.getGame().height){
+      if(changer) controlMatrix.addLastRow()
     }
     var rowNewest = rowNew
     while (rowNewest < 0) {
       rowNewest += 1
-      controlMatrix.addFirstRow()
+      if(changer) controlMatrix.addFirstRow()
     }
+    if(rowNew < 0)
+      rect.addToRow(0 - rowNew, true)
     while (colNew >= controlMatrix.getGame().width) {
-      controlMatrix.addLastColumn()
+      if(changer) controlMatrix.addLastColumn()
     }
     var colNewest = colNew
     while (colNewest < 0) {
       colNewest += 1
-      controlMatrix.addFirstColumn()
+      if(changer) controlMatrix.addFirstColumn()
     }
+    if (colNew < 0)
+      rect.addToCol(0 - colNew)
 
     println("exten " + rowNew + " " + colNew + " " + tran)
-    super.operate(controlMatrix, rowNewest, colNewest, rect, tran)
+    super.operate(controlMatrix, rowNewest, colNewest, rect, tran, changer)*/
   }
+
 }
 
 trait InextendibleOp extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false): Unit = {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
 
     if (rowNew >= controlMatrix.getGame().height || rowNew < 0 ||
       colNew >= controlMatrix.getGame().width || colNew < 0
@@ -39,122 +67,200 @@ trait InextendibleOp extends MatrixOperation {
       return
     }
 
-    super.operate(controlMatrix, rowNew, colNew, rect, tran)
+    super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
+  }
+
+  override def isExtendible(): Boolean = {
+    false
   }
 }
 
 trait TransparentOp extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false): Unit = {
-    controlMatrix.getGame().grid(rowNew)(colNew).isMine = controlMatrix.getGame().grid(rowNew)(colNew).isMine || tran
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
+    if(changer) {
+      controlMatrix.getGame().grid(rowNew)(colNew).isMine = controlMatrix.getGame().grid(rowNew)(colNew).isMine || tran
+      if(controlMatrix.getGame().grid(rowNew)(colNew).isMine)
+        controlMatrix.getGame().numMines += 1
+    }
 
-    super.operate(controlMatrix, rowNew, colNew, rect, tran)
+    //super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
   }
 }
 
 trait NonTransparentOp extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false): Unit = {
-    controlMatrix.getGame().grid(rowNew)(colNew).isMine = tran
-    if(tran)
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
+    if(changer) controlMatrix.getGame().grid(rowNew)(colNew).isMine = tran
+    if(tran && changer)
       controlMatrix.getGame().numMines += 1
 
     println("nontran " + rowNew + " " + colNew + " " + tran)
-    super.operate(controlMatrix, rowNew, colNew, rect, tran)
+    //super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
   }
 }
+
 
 trait RightRotation extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false): Unit = {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-    var minrow = 0
-    var mincol = 0
+  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+
+    var minrow = rowNew
+    var mincol = colNew
+
+
+    val newRect = new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
     rect.values.foreach { case (row, col, value) =>
-      val dy = rowNew - row
-      val dx = colNew - col
+      val dy = minrow - row
+      val dx = mincol - col
 
-      controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
+      //controlMatrix.getGame().grid(row)(col).isMine = false
 
-      super.operate(controlMatrix, rowNew - dx - minrow, colNew + dy - mincol, rect, value)
+      newRect.insertTuple(minrow - dx, mincol + dy, value)
+      mo.operate(controlMatrix, minrow - dx, mincol + dy, rect, value, changer)
 
-      if (minrow > rowNew - dx)
-        minrow = rowNew - dx
-      if (mincol > colNew + dy)
-        mincol = colNew + dy
+      if (mo.isExtendible()) {
+        if (0 > minrow - dx) {
+          //newRect.addToRow(dx - minrow)
+          minrow -= (minrow - dx)
+        }
+        if (0 > mincol + dy) {
+          //newRect.addToCol(0 - dy - mincol)
+          mincol -= (mincol + dy)
+        }
+      }
+      rect.addToAnotherRect(newRect)
     }
+    newRect
   }
 }
 
-trait LeftRotation extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false): Unit = {
+/*trait LeftRotation extends MatrixOperation {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-    var minrow = 0
-    var mincol = 0
+  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+    var minrow = rowNew
+    var mincol = colNew
 
     rect.values.foreach { case (row, col, value) =>
-      val dy = rowNew - row
-      val dx = colNew - col
+      val dy = minrow - row
+      val dx = mincol - col
 
-      controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
+      //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
+      controlMatrix.getGame().grid(row)(col).isMine = false
 
-      super.operate(controlMatrix, rowNew + dx - minrow, colNew - dy - mincol, rect, value)
+      mo.operate(controlMatrix, minrow + dx, mincol - dy, rect, value, changer)
 
-      if (minrow > rowNew + dx)
-        minrow = rowNew + dx
-      if (mincol > colNew - dy)
-        mincol = colNew - dy
+      if (mo.isExtendible()) {
+        if (0 > minrow + dx)
+          minrow -= (minrow + dx)
+        if (0 > mincol - dy)
+          mincol -= (mincol - dy)
+      }
     }
+    rect
   }
 }
 
 trait VerticalSymetry extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false): Unit = {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-    var mincol = 0
+  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+    var mincol = colNew
 
     rect.values.foreach { case (row, col, value) =>
       //val dy = rowNew - row
-      val dx = colNew - col
+      val dx = mincol - col
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
 
-      super.operate(controlMatrix, row, colNew + dx - mincol, rect, value)
+      mo.operate(controlMatrix, row, mincol + dx, rect, value, changer)
 
-      if (mincol > colNew + dx)
-        mincol = colNew + dx
+      if(mo.isExtendible()) {
+        if (0 > mincol + dx)
+          mincol -= (mincol + dx)
+      }
     }
+    rect
   }
 }
 
 trait HorizontalSymetry extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false): Unit = {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-    var minrow = 0
+  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false, changer : Boolean = false): MyRectangle = {
+    var minrow = rowNew
 
     rect.values.foreach { case (row, col, value) =>
-      val dy = rowNew - row
+      val dy = minrow - row
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
 
-      super.operate(controlMatrix, rowNew + dy - minrow, col, rect, value)
+      mo.operate(controlMatrix, minrow + dy, col, rect, value, changer)
 
-      if (minrow > rowNew + dy)
-        minrow = rowNew + dy
+      if(mo.isExtendible()) {
+        if (0 > minrow + dy)
+          minrow -= (minrow + dy)
+      }
     }
-  }
-
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false): Unit = {
-    var minrow = 0
-
-    rect.values.foreach { case (row, col, value) =>
-      val dy = rowNew - row
-
-      //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
-
-      mo.operate(controlMatrix, rowNew + dy - minrow, col, rect, value)
-
-      if (minrow > rowNew + dy)
-        minrow = rowNew + dy
-    }
-
+    rect
   }
 }
+
+trait RightDiagonalSymetry extends MatrixOperation {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
+  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+
+    var minrow = rowNew
+    var mincol = colNew
+
+    rect.values.foreach { case (row, col, value) =>
+      val dy = minrow - row
+      val dx = mincol - col
+
+      //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
+
+      println((row) + " " + (col))
+      println((rowNew) + " " + (colNew))
+      println((dy) + " " + (dx))
+
+      mo.operate(controlMatrix, minrow + dx, mincol + dy, rect, value, changer)
+
+      if(mo.isExtendible()){
+        if (0 > minrow + dx)
+          minrow -= (minrow + dx)
+        if (0 > mincol + dy)
+          mincol -= (mincol + dy)
+      }
+
+    }
+    rect
+  }
+}
+
+trait LeftDiagonalSymetry extends MatrixOperation {
+  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
+  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+
+    var minrow = rowNew
+    var mincol = colNew
+
+    rect.values.foreach { case (row, col, value) =>
+      val dy = minrow - row
+      val dx = mincol - col
+
+      //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
+
+      mo.operate(controlMatrix, minrow - dx, mincol - dy, rect, value, changer)
+
+
+      if (mo.isExtendible()) {
+        if (0 > minrow - dx)
+          minrow -= (minrow - dx)
+        if (0 > mincol - dy)
+          mincol -= (mincol - dy)
+      }
+    }
+    rect
+  }
+}*/
