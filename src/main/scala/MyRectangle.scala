@@ -14,6 +14,7 @@ class MyRectangle(matrix: Array[Array[Cell]], val y: Int, val x: Int,  val heigh
   var rowChangeLast = 0
   var colChangeLast = 0
 
+  var isCorrect = true
 
   def addToCol(d : Int, first: Boolean): Unit = {
     if(first) colChange += d
@@ -59,7 +60,7 @@ class MyRectangle(matrix: Array[Array[Cell]], val y: Int, val x: Int,  val heigh
     }
   }
 
-  def addToGame(op : Operations): Unit = {
+  def addToGame(op : Operations, isTransparent : Boolean): Unit = {
     var ind = 0
     while(ind < rowChange) {
       op.addFirstRow()
@@ -83,7 +84,10 @@ class MyRectangle(matrix: Array[Array[Cell]], val y: Int, val x: Int,  val heigh
     for {
       ind <- values.indices
     } {
-      op.getGame().grid(values(ind)._1)(values(ind)._2).isMine = values(ind)._3
+      if(isTransparent)
+        op.getGame().grid(values(ind)._1)(values(ind)._2).isMine = values(ind)._3 || op.getGame().grid(values(ind)._1)(values(ind)._2).isMine
+      else
+        op.getGame().grid(values(ind)._1)(values(ind)._2).isMine = values(ind)._3
       //(values(ind)._1 + " " + values(ind)._2 + " " + values(ind)._3)
     }
 

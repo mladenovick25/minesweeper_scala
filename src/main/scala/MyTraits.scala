@@ -8,6 +8,11 @@ trait Isometry {
     true
   }
 
+  def isTransparent(): Boolean = {
+    true
+  }
+
+
   def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer: Boolean = false): MyRectangle
 }
 
@@ -31,7 +36,7 @@ trait ExtendableOp extends Isometry {
       rect.addToCol(0 - colNew, true)
     }
 
-    super.operate(controlMatrix, 0 - rowNew, 0 - colNew, rect, tran, changer)
+    //super.operate(controlMatrix, 0 - rowNew, 0 - colNew, rect, tran, changer)
 
     /*while (rowNew >= controlMatrix.getGame().height){
       if(changer) controlMatrix.addLastRow()
@@ -66,10 +71,12 @@ trait InextendibleOp extends Isometry {
     if (rowNew >= controlMatrix.getGame().height || rowNew < 0 ||
       colNew >= controlMatrix.getGame().width || colNew < 0
     ) {
+      println("INEXTE " + rowNew + " " + colNew + " " + tran)
+      rect.isCorrect = false
       return
     }
 
-    super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
+    //super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
   }
 
   override def isExtendible(): Boolean = {
@@ -78,25 +85,14 @@ trait InextendibleOp extends Isometry {
 }
 
 trait TransparentOp extends Isometry {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
-    if(changer) {
-      controlMatrix.getGame().grid(rowNew)(colNew).isMine = controlMatrix.getGame().grid(rowNew)(colNew).isMine || tran
-      if(controlMatrix.getGame().grid(rowNew)(colNew).isMine)
-        controlMatrix.getGame().numMines += 1
-    }
-
-    //super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
+  override def isTransparent(): Boolean = {
+    true
   }
 }
 
 trait NonTransparentOp extends Isometry {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
-    if(changer) controlMatrix.getGame().grid(rowNew)(colNew).isMine = tran
-    if(tran && changer)
-      controlMatrix.getGame().numMines += 1
-
-    println("nontran " + rowNew + " " + colNew + " " + tran)
-    //super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
+  override def isTransparent() : Boolean = {
+    false
   }
 }
 

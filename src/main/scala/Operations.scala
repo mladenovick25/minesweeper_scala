@@ -162,8 +162,11 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
 
             val nextRect = iso._1.extendMe(iso._1, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
 
+            if(!nextRect.isCorrect || !rect.isCorrect)
+              return new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
+
             rect.printRect()
-            nextRect.addToGame(newOP)
+            nextRect.addToGame(newOP, iso._1.isTransparent())
             rect.clearOutOfImage(newOP, nextRect)
 
             // NEW COORDINATES
