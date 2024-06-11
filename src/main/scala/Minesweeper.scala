@@ -62,6 +62,20 @@ class Minesweeper(val widthArg: Int, val heightArg: Int, numMinesArg: Int) {
     return numMines
   }
 
+  def updateNumMines(): Unit = {
+    val yMax = height
+    val xMax = width
+    numMines = 0
+
+    for {
+      y <- 0 to yMax - 1
+      x <- 0 to xMax - 1
+    } {
+      if (grid(y)(x).isMine)
+        numMines += 1
+    }
+  }
+
   def importLevel(lines: Seq[String], x_max : Int, y_max : Int): Unit = {
     grid = Array.ofDim[Cell](y_max, x_max)
     height = y_max
@@ -242,5 +256,20 @@ class Minesweeper(val widthArg: Int, val heightArg: Int, numMinesArg: Int) {
     }
   }
 
+
+  def copyToMe(minesweeper: Minesweeper): Unit = {
+    val yMax = minesweeper.height
+    val xMax = minesweeper.width
+    numMines = 0
+
+    for {
+      y <- 0 to yMax - 1
+      x <- 0 to xMax - 1
+    } {
+      grid(y)(x).isMine = minesweeper.grid(y)(x).isMine
+      if(grid(y)(x).isMine)
+        numMines += 1
+    }
+  }
 
 }

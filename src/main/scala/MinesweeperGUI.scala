@@ -13,7 +13,7 @@ import scala.io.Source
 import java.io.{File, PrintWriter}
 
 object MinesweeperGUI extends SimpleSwingApplication {
-  private val game = new Minesweeper(9, 9, 10)
+  var game = new Minesweeper(9, 9, 10)
   private var buttons = Array.ofDim[Button](game.height, game.width)
 
   def top: MainFrame = new MainFrame {

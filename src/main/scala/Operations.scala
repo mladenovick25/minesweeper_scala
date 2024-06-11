@@ -5,6 +5,9 @@ import DialogUtils._
 
 class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Unit) extends BoxPanel(Orientation.Vertical)  {
 
+  var CHANGEDY = 0
+  var CHANGEDX = 0
+
   val addFirstRowButton = new Button("+ first row")
   val addLastRowButton = new Button("+ last row")
   val deleteFirstRowButton = new Button("- first row")
@@ -124,9 +127,81 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
       }
     case ButtonClicked(`rotationButton`) =>
 
-      val rotationWithExtensions = new RightRotation {}
+      var nextIsoS: Array[(Isometry, Int, Int)] = {
+        for {
+          ind <- 0 until 4
+        } yield (new NonTransparentOp with ExtendableOp with RightRotation {}, 0 , 0)
+      }.toArray
+
+      //val MYGAMErect = new MyRectangle(game.grid, 0, 0, game.height, game.width)
+      val MYGAME = new Minesweeper(game.width, game.height, 0)
+      MYGAME.copyToMe(game)
+
+      def dummyFunction() = {}
+
+      val newOP = new Operations(MYGAME, dummyFunction, dummyFunction)
+
+      def popFromArray(arr: Array[(Isometry, Int, Int)]): (Array[(Isometry, Int, Int)], Option[(Isometry, Int, Int)]) = {
+        if (arr.isEmpty) {
+          (arr, None) // Return the original array and None if array is empty
+        } else {
+          (arr.init, Some(arr.last)) // Return the array without the last element and the last element
+        }
+      }
+
+      def useIsometry(rect: MyRectangle, nextIsos : Array[(Isometry, Int, Int)]) : MyRectangle ={
+
+        val (updatedNextIsos, isoTuple) = popFromArray(nextIsos)
+
+        isoTuple match {
+          case Some(iso) =>
+            println(s"Popped element: $iso")
+            // operacija /////////////////////////////////
+            var yCoor = iso._2
+            var xCoor = iso._3
+
+            val nextRect = iso._1.extendMe(iso._1, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
+
+            rect.printRect()
+            nextRect.addToGame(newOP)
+            rect.clearOutOfImage(newOP, nextRect)
+
+            // NEW COORDINATES
+            newOP.CHANGEDY += nextRect.rowChange
+            newOP.CHANGEDX += nextRect.colChange
+            nextRect.resetChangeNums()
+
+            useIsometry(nextRect, updatedNextIsos)
+            /////////////////////////////////////////////
+
+          case None =>
+            println("No element was popped because the array was empty")
+            MinesweeperGUI.game = newOP.getGame()
+            updatePanel()
+            resetGame()
+            rect
+        }
+      }
+
+      val rect = new MyRectangle(game.grid, 3, 1, 3, 3)
+      //useIsometry(rect, nextIsoS)
+
+      ///////////////////////////////////
+
+      def kompozicija(nextIsoS : Array[(Isometry, Int, Int)]): MyRectangle => MyRectangle = {
+        (x: MyRectangle) => {
+          useIsometry(x, nextIsoS)
+        }
+      }
+
+      val cetvorostrukaRotacija = kompozicija(nextIsoS)
+      cetvorostrukaRotacija(rect)
+
+        /////////////////////////////////
+
+      /*val rotationWithExtensions = new RightRotation {}
       //val rotationWithExtensions = new RightDiagonalSymetry {}
-      var rotic = new MatrixOperation {}
+      var rotic = new Isometry {}
       //var roticCh = new MatrixOperation {}
 
       (option1Checkbox.selected, option2Checkbox.selected) match {
@@ -161,15 +236,17 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
         //val finalRect = rotationWithExtensions.extendMe(rotic, this, newRect.rowChange + 0, newRect.colChange + 0, newRect, true, true)
 
         println("KITA  " + newRectCh.rowChange + " " + newRectCh.colChange)
-        rowCENTER = newRectCh.rowChange
-        colCENTER = newRectCh.colChange
+        rowCENTER += newRectCh.rowChange
+        colCENTER += newRectCh.colChange
         newRectCh.resetChangeNums()
         //newRectCh.printRect()
 
-        val nextRect = rotationWithExtensions.extendMe(rotic, this, rowCENTER, colCENTER, newRectCh, true, false)
+        val leftDiagonalSym = new LeftDiagonalSymetry {}
+
+        val nextRect = leftDiagonalSym.extendMe(rotic, this, rowCENTER, colCENTER, newRectCh, true, false)
         nextRect.addToGame(this)
         //finalRect.printRect()
-      }
+      }*/
 
 
   }

@@ -1,15 +1,17 @@
 
-trait MatrixOperation {
-  def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
-    println("super " +   controlMatrix.getGame().grid(rowNew)(colNew).isMine)
+trait Isometry {
+  def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer: Boolean = false): Unit = {
+    println("super " + controlMatrix.getGame().grid(rowNew)(colNew).isMine)
   }
 
   def isExtendible(): Boolean = {
     true
   }
+
+  def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer: Boolean = false): MyRectangle
 }
 
-trait ExtendableOp extends MatrixOperation {
+trait ExtendableOp extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
 
     if (rowNew >= controlMatrix.getGame().height) {
@@ -58,7 +60,7 @@ trait ExtendableOp extends MatrixOperation {
 
 }
 
-trait InextendibleOp extends MatrixOperation {
+trait InextendibleOp extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
 
     if (rowNew >= controlMatrix.getGame().height || rowNew < 0 ||
@@ -75,7 +77,7 @@ trait InextendibleOp extends MatrixOperation {
   }
 }
 
-trait TransparentOp extends MatrixOperation {
+trait TransparentOp extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
     if(changer) {
       controlMatrix.getGame().grid(rowNew)(colNew).isMine = controlMatrix.getGame().grid(rowNew)(colNew).isMine || tran
@@ -87,7 +89,7 @@ trait TransparentOp extends MatrixOperation {
   }
 }
 
-trait NonTransparentOp extends MatrixOperation {
+trait NonTransparentOp extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
     if(changer) controlMatrix.getGame().grid(rowNew)(colNew).isMine = tran
     if(tran && changer)
@@ -99,10 +101,12 @@ trait NonTransparentOp extends MatrixOperation {
 }
 
 
-trait RightRotation extends MatrixOperation {
-  override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
+trait RightRotation extends Isometry {
+  /*override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
+    super.operate(controlMatrix, rowNew, colNew, rect, tran, changer)
+  }*/
 
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+  override def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
 
     var minrow = rowNew
     var mincol = colNew
@@ -135,20 +139,23 @@ trait RightRotation extends MatrixOperation {
   }
 }
 
-/*trait LeftRotation extends MatrixOperation {
+trait LeftRotation extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+  override def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
     var minrow = rowNew
     var mincol = colNew
+
+    val newRect = new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
     rect.values.foreach { case (row, col, value) =>
       val dy = minrow - row
       val dx = mincol - col
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
-      controlMatrix.getGame().grid(row)(col).isMine = false
+      //controlMatrix.getGame().grid(row)(col).isMine = false
 
+      newRect.insertTuple(minrow + dx, mincol - dy, value)
       mo.operate(controlMatrix, minrow + dx, mincol - dy, rect, value, changer)
 
       if (mo.isExtendible()) {
@@ -157,16 +164,19 @@ trait RightRotation extends MatrixOperation {
         if (0 > mincol - dy)
           mincol -= (mincol - dy)
       }
+      rect.addToAnotherRect(newRect)
     }
-    rect
+    newRect
   }
 }
 
-trait VerticalSymetry extends MatrixOperation {
+trait VerticalSymetry extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+  override def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
     var mincol = colNew
+
+    val newRect = new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
     rect.values.foreach { case (row, col, value) =>
       //val dy = rowNew - row
@@ -174,45 +184,53 @@ trait VerticalSymetry extends MatrixOperation {
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
 
+      newRect.insertTuple(row, mincol + dx, value)
       mo.operate(controlMatrix, row, mincol + dx, rect, value, changer)
 
       if(mo.isExtendible()) {
         if (0 > mincol + dx)
           mincol -= (mincol + dx)
       }
+      rect.addToAnotherRect(newRect)
     }
-    rect
+    newRect
   }
 }
 
-trait HorizontalSymetry extends MatrixOperation {
+trait HorizontalSymetry extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
 
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false, changer : Boolean = false): MyRectangle = {
+  override def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran : Boolean = false, changer : Boolean = false): MyRectangle = {
     var minrow = rowNew
+
+    val newRect = new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
     rect.values.foreach { case (row, col, value) =>
       val dy = minrow - row
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
 
+      newRect.insertTuple(minrow + dy, col, value)
       mo.operate(controlMatrix, minrow + dy, col, rect, value, changer)
 
       if(mo.isExtendible()) {
         if (0 > minrow + dy)
           minrow -= (minrow + dy)
       }
+      rect.addToAnotherRect(newRect)
     }
-    rect
+    newRect
   }
 }
 
-trait RightDiagonalSymetry extends MatrixOperation {
+trait RightDiagonalSymetry extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+  override def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
 
     var minrow = rowNew
     var mincol = colNew
+
+    val newRect = new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
     rect.values.foreach { case (row, col, value) =>
       val dy = minrow - row
@@ -220,10 +238,11 @@ trait RightDiagonalSymetry extends MatrixOperation {
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
 
-      println((row) + " " + (col))
+      /*println((row) + " " + (col))
       println((rowNew) + " " + (colNew))
-      println((dy) + " " + (dx))
+      println((dy) + " " + (dx))*/
 
+      newRect.insertTuple(minrow + dx, mincol + dy, value)
       mo.operate(controlMatrix, minrow + dx, mincol + dy, rect, value, changer)
 
       if(mo.isExtendible()){
@@ -233,17 +252,20 @@ trait RightDiagonalSymetry extends MatrixOperation {
           mincol -= (mincol + dy)
       }
 
+      rect.addToAnotherRect(newRect)
     }
-    rect
+    newRect
   }
 }
 
-trait LeftDiagonalSymetry extends MatrixOperation {
+trait LeftDiagonalSymetry extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {}
-  def extendMe(mo: MatrixOperation, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
+  override def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): MyRectangle = {
 
     var minrow = rowNew
     var mincol = colNew
+
+    val newRect = new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
     rect.values.foreach { case (row, col, value) =>
       val dy = minrow - row
@@ -251,6 +273,7 @@ trait LeftDiagonalSymetry extends MatrixOperation {
 
       //controlMatrix.getGame().grid(row - minrow)(col - mincol).isMine = false
 
+      newRect.insertTuple(minrow - dx, mincol - dy, value)
       mo.operate(controlMatrix, minrow - dx, mincol - dy, rect, value, changer)
 
 
@@ -260,7 +283,8 @@ trait LeftDiagonalSymetry extends MatrixOperation {
         if (0 > mincol - dy)
           mincol -= (mincol - dy)
       }
+      rect.addToAnotherRect(newRect)
     }
-    rect
+    newRect
   }
-}*/
+}

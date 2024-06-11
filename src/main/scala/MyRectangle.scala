@@ -1,3 +1,5 @@
+import scala.util.control.Breaks.break
+
 class MyRectangle(matrix: Array[Array[Cell]], val y: Int, val x: Int,  val height: Int, val width: Int) {
 
   var values: Array[(Int, Int, Boolean)] = {
@@ -112,6 +114,48 @@ class MyRectangle(matrix: Array[Array[Cell]], val y: Int, val x: Int,  val heigh
       rect.addToCol(colChangeLast - ind, false)
     }
   }
+
+  def clearOutOfImage(op: Operations, image : MyRectangle): Unit = {
+    for {
+      ind <- values.indices
+    } {
+      val y = values(ind)._1
+      val x = values(ind)._2
+
+      var throwOut = true
+
+      image.values.foreach(vv =>
+          if(vv._1 == y && vv._2 == x){
+            throwOut = false
+            break
+          }
+      )
+      if(throwOut)
+        op.getGame().grid(y)(x).isMine = false
+      //(values(ind)._1 + " " + values(ind)._2 + " " + values(ind)._3)
+    }
+    op.getGame().updateNumMines()
+  }
+
+
+  /*def kompozicija(rect: MyRectangle): MyRectangle => MyRectangle = {
+
+    //  uspesna provera
+    if(true) {
+      (x: MyRectangle) => {
+        rect
+      }
+    }
+    else{
+      (x: MyRectangle) => {
+        println("Nista")
+        new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
+      }
+    }
+  }
+
+  val duplaRotacija = kompozicija((this))
+  duplaRotacija(this)*/
 
 }
 
