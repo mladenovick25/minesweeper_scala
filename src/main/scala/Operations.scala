@@ -1,13 +1,15 @@
 import scala.swing.event.ButtonClicked
-import scala.swing.{BoxPanel, Button, CheckBox, FlowPanel, Orientation}
+import scala.swing.{BoxPanel, Button, CheckBox, FlowPanel, Orientation, TextField}
 import DialogUtils._
 
 import scala.collection.mutable.ArrayBuffer
 
 
-class Operations (gamee:Minesweeper, updatePanel: () => Unit, resetGame: () => Unit) extends BoxPanel(Orientation.Vertical)  {
+class Operations (gamee:Minesweeper, updatePanel: () => Unit, resetGame: () => Unit, globalArrayFunctions : ArrayBuffer[(String, (MyRectangle, ArrayBuffer[Int]) => MyRectangle)]) extends BoxPanel(Orientation.Vertical)  {
 
   var game = gamee
+
+  val myGlobalArrayFunctions = globalArrayFunctions
 
   var CHANGEDY = 0
   var CHANGEDX = 0
@@ -28,6 +30,14 @@ class Operations (gamee:Minesweeper, updatePanel: () => Unit, resetGame: () => U
   val option1Checkbox = new CheckBox("Transparent")
   val option2Checkbox = new CheckBox("Extendable")
   val rotationButton = new Button("Rotate Cell")
+
+
+  val expressionField = new TextField {
+    columns = 50
+  }
+  val functionCallerField = new TextField {
+    columns = 50
+  }
 
 
 
@@ -53,6 +63,9 @@ class Operations (gamee:Minesweeper, updatePanel: () => Unit, resetGame: () => U
     contents += option2Checkbox
     contents += rotationButton
   }
+
+  contents += expressionField
+  contents += functionCallerField
 
   listenTo(addFirstRowButton, addLastRowButton, deleteFirstRowButton, deleteLastRowButton,
     addFirstColumnButton, addLastColumnButton, deleteFirstColumnButton, deleteLastColumnButton,
@@ -131,221 +144,22 @@ class Operations (gamee:Minesweeper, updatePanel: () => Unit, resetGame: () => U
       }
     case ButtonClicked(`rotationButton`) =>
 
+      //contents += expressionField
+      //contents += functionCallerField
 
-      val inputStr = "Oper(x,y) = RRotE(x,y) <- RRotE(x,y) <- RRotE(x,y)"
-
-      /*var nextISOS: ArrayBuffer[(Isometry, ArrayBuffer[Int])] = ArrayBuffer(
-        (0 until 4).map { _ =>
-          (new Isometry with NonTransparentOp with ExtendableOp with RightRotation {}, ArrayBuffer[Int](0,0))
-        }: _* // Spread operator to convert Seq to multiple arguments for ArrayBuffer.apply
-      )*/
-
-
-      var arFunkcije = ArrayBuffer[(String, (MyRectangle, ArrayBuffer[Int]) => MyRectangle)]()
-
-      val ec = new ExpressionController(arFunkcije)
-      ec.loadExpression(inputStr)
-      var nextISOS = ec.makeItReal()
-
-
-
-      //val MYGAMErect = new MyRectangle(game.grid, 0, 0, game.height, game.width)
-      val MYGAME = new Minesweeper(game.width, game.height, 0)
-      CHANGEDX = 0
-      CHANGEDY = 0
-      MYGAME.copyToMe(game)
-
-      def dummyFunction() = {}
-
-      var newOP = new Operations(MYGAME, dummyFunction, dummyFunction)
-
-
-      def useIsometry(rect: MyRectangle, nextIsos : ArrayBuffer[(Either[(MyRectangle,ArrayBuffer[Int]) => MyRectangle, Isometry], Isometry, ArrayBuffer[Int])],  ab: ArrayBuffer[Int]) : MyRectangle ={
-
-
-        val isoTuple = nextIsos.lastOption
-
-          isoTuple match {
-          case Some(iso) =>
-            println(s"Popped element: $iso")
-            nextIsos.trimEnd(1)
-            // operacija /////////////////////////////////
-
-
-            iso._1 match {
-              case Left(func) =>
-                var newArguments = ArrayBuffer[Int]()
-                for (elem <- iso._3) {
-                  if (elem < -300) {
-                    var pomel = 0 - (elem + 300) - 1
-                    pomel = ab(pomel)
-                    newArguments += pomel
-                  }
-                  else
-                    newArguments += elem
-                }
-                println("USO OVDE AAAAAAAAAAAAAAAA " + iso._3)
-                rect.printRect()
-                val nextRect = func(rect, newArguments)
-                nextRect.printRect()
-                println("IZASO OVDE AAAAAAAAAAAAAAAA")
-                nextRect.resetChangeNums()
-                useIsometry(nextRect, nextIsos, ab)
-              case Right(isoo) =>
-
-                // ######################################################
-
-                var yCoor = iso._3(0)
-                if (yCoor < -300) {
-                  yCoor = 0 - (yCoor + 300) - 1
-                  yCoor = ab(yCoor)
-                }
-                var xCoor = iso._3(1)
-                if (xCoor < -300) {
-                  xCoor = 0 - (xCoor + 300) - 1
-                  xCoor = ab(xCoor)
-                }
-
-                // ######################################################
-
-                val nextRect = isoo.extendMe(iso._2, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
-
-                if (!nextRect.isCorrect || !rect.isCorrect)
-                  return new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
-
-                rect.printRect()
-                nextRect.addToGame(newOP, iso._2.isTransparent())
-                //rect.clearOutOfImage(newOP, nextRect)
-
-                // NEW COORDINATES
-                newOP.CHANGEDY += nextRect.rowChange
-                newOP.CHANGEDX += nextRect.colChange
-                nextRect.resetChangeNums()
-
-                useIsometry(nextRect, nextIsos, ab)
-              /////////////////////////////////////////////
-            }
-
-            /*val nextRect = iso._1.extendMe(iso._2, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
-
-            if(!nextRect.isCorrect || !rect.isCorrect)
-              return new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
-
-            rect.printRect()
-            nextRect.addToGame(newOP, iso._2.isTransparent())
-            //rect.clearOutOfImage(newOP, nextRect)
-
-            // NEW COORDINATES
-            newOP.CHANGEDY += nextRect.rowChange
-            newOP.CHANGEDX += nextRect.colChange
-            nextRect.resetChangeNums()
-
-            useIsometry(nextRect, nextIsos, ab)*/
-            /////////////////////////////////////////////
-
-          case None =>
-            println("No element was popped because the array was empty")
-            MinesweeperGUI.game = newOP.getGame()
-            game = newOP.getGame()
-            updatePanel()
-            resetGame()
-            rect
-        }
-      }
+      val isoMaker = new IsometryMaker(this, updatePanel, resetGame)
 
       val rect = new MyRectangle(game.grid, 3, 1, 3, 3)
-      //useIsometry(rect, nextIsoS)
 
-      ///////////////////////////////////
-
-      def composition(ec : ExpressionController, nextIsoS : ArrayBuffer[(Either[(MyRectangle,ArrayBuffer[Int]) => MyRectangle, Isometry], Isometry, ArrayBuffer[Int])]): (MyRectangle, ArrayBuffer[Int]) => MyRectangle = {
-        (x: MyRectangle, ab: ArrayBuffer[Int]) => {
-          useIsometry(x, nextIsoS, ab)
-        }
-      }
-
-     /* def compositionWithArgument(nextIsoS: Array[(Isometry, Int, Int)]): (MyRectangle,Array[Int]) => MyRectangle = {
-        (x: MyRectangle, arg : Array[Int]) => {
-          useIsometry(x, nextIsoS)
-        }
-      }*/
-
-      val trostrukaRotacija = composition(ec, nextISOS)
-      val ar  = ArrayBuffer[Int](1,2,3)
-      //trostrukaRotacija(rect, ar)
+      val newFunct = isoMaker.createNewIsometry(expressionField.text)
 
 
-      arFunkcije += (("trostrukaRotacija", trostrukaRotacija))
+      //val newInputStr = "Oper(x,y) = LDiag(x,y) <- RDiag(x,y)"
 
-      //val newInputStr = "Oper(x,y,z) = RRotE(0,0) <- trostrukaRotacija(0,z)"// <- RRotE(0,x) <- RRotE(0,x)"
-      //val newInputStr = "Oper(x,y,z) = VerTE(0,30) <- VerTE(0,18) <- HorTE(0,0) <- VerTE(0,5)"
-      //val newInputStr = "Oper(x,y,z) = HorTE(0,0)"
-      val newInputStr = "Oper(x,y) = LDiag(x,y) <- RDiag(x,y)"
-
-      //var arFunkcije = ArrayBuffer[(String, (MyRectangle, ArrayBuffer[Int]) => MyRectangle)]()
-
-      val ecc = new ExpressionController(arFunkcije)
-      ecc.loadExpression(newInputStr)
-      val nextISOSISOS = ecc.makeItReal()
-      print("AAAAAAAAAAAAA " + nextISOSISOS)
-
-      val petorostruka = composition(ecc, nextISOSISOS)
-      val arrr = ArrayBuffer[Int](1, 2, 3)
       val centralna = ArrayBuffer[Int]((game.height / 2).toInt, (game.width / 2).toInt)
-      petorostruka(rect, centralna)
-
-          //newOP = new Operations(MYGAME, dummyFunction, dummyFunction)
-
-        /////////////////////////////////
-
-      /*val rotationWithExtensions = new RightRotation {}
-      //val rotationWithExtensions = new RightDiagonalSymetry {}
-      var rotic = new Isometry {}
-      //var roticCh = new MatrixOperation {}
-
-      (option1Checkbox.selected, option2Checkbox.selected) match {
-        case (true, true) =>
-          rotic = new TransparentOp with ExtendableOp {}
-          //roticCh = new ExtendableOp {}
-        case (true, false) =>
-          rotic = new TransparentOp with InextendibleOp {}
-          //roticCh = new InextendibleOp {}
-        case (false, true) =>
-          rotic = new NonTransparentOp with ExtendableOp {}
-          // = new ExtendableOp {}
-        case (false, false) =>
-          rotic = new NonTransparentOp with InextendibleOp {}
-          //roticCh = new InextendibleOp {}
-      }
-
-      val rectCh = new MyRectangle(game.grid, 3, 1, 3, 3)
-      val rect = new MyRectangle(game.grid, 3, 1, 3, 3)
+      newFunct(rect, centralna)
 
 
-      var rowCENTER = 0
-      var colCENTER = 0
-
-
-      val newRectCh = rotationWithExtensions.extendMe(rotic, this, rowCENTER, colCENTER, rectCh, true, false)
-
-      if(newRectCh.checkRect()){
-        //val newRect = rotationWithExtensions.extendMe(rotic, this, 0, 0, rect, true,true)
-        newRectCh.addToGame(this)
-        //druga
-        //val finalRect = rotationWithExtensions.extendMe(rotic, this, newRect.rowChange + 0, newRect.colChange + 0, newRect, true, true)
-
-        println("KITA  " + newRectCh.rowChange + " " + newRectCh.colChange)
-        rowCENTER += newRectCh.rowChange
-        colCENTER += newRectCh.colChange
-        newRectCh.resetChangeNums()
-        //newRectCh.printRect()
-
-        val leftDiagonalSym = new LeftDiagonalSymetry {}
-
-        val nextRect = leftDiagonalSym.extendMe(rotic, this, rowCENTER, colCENTER, newRectCh, true, false)
-        nextRect.addToGame(this)
-        //finalRect.printRect()
-      }*/
 
 
   }

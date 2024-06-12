@@ -2,19 +2,16 @@ import MinesweeperGUI.game
 
 import scala.swing._
 import scala.swing.event._
-
 import java.awt.event.{MouseAdapter, MouseEvent}
 import scala.util.Random
-
 import javax.swing.{Timer => SwingTimer}
 import java.awt.Font
 import java.awt.Dimension
 import scala.annotation.tailrec
-
 import java.io.File
 import scala.io.Source
-
 import java.io.{File, PrintWriter}
+import scala.collection.mutable.ArrayBuffer
 
 object MinesweeperGUI extends SimpleSwingApplication {
   var game = new Minesweeper(9, 9, 10)
@@ -234,7 +231,10 @@ object MinesweeperGUI extends SimpleSwingApplication {
         //preferredSize = new Dimension(game.width * 50, 50)
       }
 
-      val addRowsColumnsPanel = new Operations(game, updateGamePanel, resetGame)
+
+      // CITANJE IZ FAJLA
+      var globalArrayFunction = ArrayBuffer[(String, (MyRectangle, ArrayBuffer[Int]) => MyRectangle)]()
+      val addRowsColumnsPanel = new Operations(game, updateGamePanel, resetGame, globalArrayFunction)
 
 
       val listView1 = new ListView(Seq("Experts:", "Item 1", "Item 2", "Item 3"))
