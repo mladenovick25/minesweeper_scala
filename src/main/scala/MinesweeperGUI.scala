@@ -2,14 +2,18 @@ import MinesweeperGUI.game
 
 import scala.swing._
 import scala.swing.event._
+
 import java.awt.event.{MouseAdapter, MouseEvent}
 import scala.util.Random
+
 import javax.swing.{Timer => SwingTimer}
 import java.awt.Font
 import java.awt.Dimension
 import scala.annotation.tailrec
+
 import java.io.File
 import scala.io.Source
+
 import java.io.{File, PrintWriter}
 
 object MinesweeperGUI extends SimpleSwingApplication {
@@ -315,7 +319,7 @@ object MinesweeperGUI extends SimpleSwingApplication {
                     contents += new Button(file.getName) {
                       reactions += {
                         case ButtonClicked(_) =>
-                          val source = scala.io.Source.fromFile(file)
+                          val source = _root_.scala.io.Source.fromFile(file)
                           val fileContent = try source.mkString finally source.close()
                           println(s"File content of ${file.getName}:\n$fileContent")
                           game.loadLevels(fileContent)

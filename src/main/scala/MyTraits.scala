@@ -13,23 +13,25 @@ trait Isometry {
   }
 
 
-  def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer: Boolean = false): MyRectangle
+  def extendMe(mo: Isometry, controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer: Boolean = false): MyRectangle = {
+    new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
+  }
 }
 
 trait ExtendableOp extends Isometry {
   override def operate(controlMatrix: Operations, rowNew: Int, colNew: Int, rect: MyRectangle, tran: Boolean = false, changer : Boolean = false): Unit = {
 
-    if (rowNew >= controlMatrix.getGame().height) {
+    if (rowNew >= controlMatrix.getGame().height + rect.rowChangeLast) {
       //if (changer) controlMatrix.addLastRow()
-      rect.addToRow(rowNew - (controlMatrix.getGame().height - 1), false)
+      rect.addToRow(rowNew - (controlMatrix.getGame().height + + rect.rowChangeLast - 1), false)
     }
     if (rowNew < 0) {
       //if (changer) controlMatrix.addFirstRow()
       rect.addToRow(0 - rowNew, true)
     }
-    if (colNew >= controlMatrix.getGame().width) {
+    if (colNew >= controlMatrix.getGame().width + rect.colChangeLast) {
       //if (changer) controlMatrix.addLastColumn()
-      rect.addToCol(colNew - (controlMatrix.getGame().width - 1), false)
+      rect.addToCol(colNew - (controlMatrix.getGame().width + rect.colChangeLast - 1), false)
     }
     if (colNew < 0) {
       //if (changer) controlMatrix.addFirstColumn()

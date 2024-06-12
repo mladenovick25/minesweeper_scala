@@ -2,8 +2,12 @@ import scala.swing.event.ButtonClicked
 import scala.swing.{BoxPanel, Button, CheckBox, FlowPanel, Orientation}
 import DialogUtils._
 
+import scala.collection.mutable.ArrayBuffer
 
-class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Unit) extends BoxPanel(Orientation.Vertical)  {
+
+class Operations (gamee:Minesweeper, updatePanel: () => Unit, resetGame: () => Unit) extends BoxPanel(Orientation.Vertical)  {
+
+  var game = gamee
 
   var CHANGEDY = 0
   var CHANGEDX = 0
@@ -127,59 +131,122 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
       }
     case ButtonClicked(`rotationButton`) =>
 
-      var nextIsoS: Array[(Isometry, Int, Int)] = {
-        for {
-          ind <- 0 until 4
-        } yield (new NonTransparentOp with ExtendableOp with RightRotation {}, 0 , 0)
-      }.toArray
+
+      val inputStr = "Oper(x,y) = RRotE(x,y) <- RRotE(x,y) <- RRotE(x,y)"
+
+      /*var nextISOS: ArrayBuffer[(Isometry, ArrayBuffer[Int])] = ArrayBuffer(
+        (0 until 4).map { _ =>
+          (new Isometry with NonTransparentOp with ExtendableOp with RightRotation {}, ArrayBuffer[Int](0,0))
+        }: _* // Spread operator to convert Seq to multiple arguments for ArrayBuffer.apply
+      )*/
+
+
+      var arFunkcije = ArrayBuffer[(String, (MyRectangle, ArrayBuffer[Int]) => MyRectangle)]()
+
+      val ec = new ExpressionController(arFunkcije)
+      ec.loadExpression(inputStr)
+      var nextISOS = ec.makeItReal()
+
+
 
       //val MYGAMErect = new MyRectangle(game.grid, 0, 0, game.height, game.width)
       val MYGAME = new Minesweeper(game.width, game.height, 0)
+      CHANGEDX = 0
+      CHANGEDY = 0
       MYGAME.copyToMe(game)
 
       def dummyFunction() = {}
 
-      val newOP = new Operations(MYGAME, dummyFunction, dummyFunction)
+      var newOP = new Operations(MYGAME, dummyFunction, dummyFunction)
 
-      def popFromArray(arr: Array[(Isometry, Int, Int)]): (Array[(Isometry, Int, Int)], Option[(Isometry, Int, Int)]) = {
-        if (arr.isEmpty) {
-          (arr, None) // Return the original array and None if array is empty
-        } else {
-          (arr.init, Some(arr.last)) // Return the array without the last element and the last element
-        }
-      }
 
-      def useIsometry(rect: MyRectangle, nextIsos : Array[(Isometry, Int, Int)]) : MyRectangle ={
+      def useIsometry(rect: MyRectangle, nextIsos : ArrayBuffer[(Either[(MyRectangle,ArrayBuffer[Int]) => MyRectangle, Isometry], Isometry, ArrayBuffer[Int])],  ab: ArrayBuffer[Int]) : MyRectangle ={
 
-        val (updatedNextIsos, isoTuple) = popFromArray(nextIsos)
 
-        isoTuple match {
+        val isoTuple = nextIsos.lastOption
+
+          isoTuple match {
           case Some(iso) =>
             println(s"Popped element: $iso")
+            nextIsos.trimEnd(1)
             // operacija /////////////////////////////////
-            var yCoor = iso._2
-            var xCoor = iso._3
 
-            val nextRect = iso._1.extendMe(iso._1, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
+
+            iso._1 match {
+              case Left(func) =>
+                var newArguments = ArrayBuffer[Int]()
+                for (elem <- iso._3) {
+                  if (elem < -300) {
+                    var pomel = 0 - (elem + 300) - 1
+                    pomel = ab(pomel)
+                    newArguments += pomel
+                  }
+                  else
+                    newArguments += elem
+                }
+                println("USO OVDE AAAAAAAAAAAAAAAA " + iso._3)
+                rect.printRect()
+                val nextRect = func(rect, newArguments)
+                nextRect.printRect()
+                println("IZASO OVDE AAAAAAAAAAAAAAAA")
+                nextRect.resetChangeNums()
+                useIsometry(nextRect, nextIsos, ab)
+              case Right(isoo) =>
+
+                // ######################################################
+
+                var yCoor = iso._3(0)
+                if (yCoor < -300) {
+                  yCoor = 0 - (yCoor + 300) - 1
+                  yCoor = ab(yCoor)
+                }
+                var xCoor = iso._3(1)
+                if (xCoor < -300) {
+                  xCoor = 0 - (xCoor + 300) - 1
+                  xCoor = ab(xCoor)
+                }
+
+                // ######################################################
+
+                val nextRect = isoo.extendMe(iso._2, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
+
+                if (!nextRect.isCorrect || !rect.isCorrect)
+                  return new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
+
+                rect.printRect()
+                nextRect.addToGame(newOP, iso._2.isTransparent())
+                //rect.clearOutOfImage(newOP, nextRect)
+
+                // NEW COORDINATES
+                newOP.CHANGEDY += nextRect.rowChange
+                newOP.CHANGEDX += nextRect.colChange
+                nextRect.resetChangeNums()
+
+                useIsometry(nextRect, nextIsos, ab)
+              /////////////////////////////////////////////
+            }
+
+            /*val nextRect = iso._1.extendMe(iso._2, newOP, yCoor + newOP.CHANGEDY, xCoor + newOP.CHANGEDX, rect, true, false)
 
             if(!nextRect.isCorrect || !rect.isCorrect)
               return new MyRectangle(Array.ofDim[Cell](0, 0), 0, 0, 0, 0)
 
             rect.printRect()
-            nextRect.addToGame(newOP, iso._1.isTransparent())
-            rect.clearOutOfImage(newOP, nextRect)
+            nextRect.addToGame(newOP, iso._2.isTransparent())
+            //rect.clearOutOfImage(newOP, nextRect)
 
             // NEW COORDINATES
             newOP.CHANGEDY += nextRect.rowChange
             newOP.CHANGEDX += nextRect.colChange
             nextRect.resetChangeNums()
 
-            useIsometry(nextRect, updatedNextIsos)
+            useIsometry(nextRect, nextIsos, ab)*/
             /////////////////////////////////////////////
 
           case None =>
             println("No element was popped because the array was empty")
             MinesweeperGUI.game = newOP.getGame()
+            game = newOP.getGame()
             updatePanel()
             resetGame()
             rect
@@ -191,14 +258,43 @@ class Operations (game:Minesweeper, updatePanel: () => Unit, resetGame: () => Un
 
       ///////////////////////////////////
 
-      def kompozicija(nextIsoS : Array[(Isometry, Int, Int)]): MyRectangle => MyRectangle = {
-        (x: MyRectangle) => {
-          useIsometry(x, nextIsoS)
+      def composition(ec : ExpressionController, nextIsoS : ArrayBuffer[(Either[(MyRectangle,ArrayBuffer[Int]) => MyRectangle, Isometry], Isometry, ArrayBuffer[Int])]): (MyRectangle, ArrayBuffer[Int]) => MyRectangle = {
+        (x: MyRectangle, ab: ArrayBuffer[Int]) => {
+          useIsometry(x, nextIsoS, ab)
         }
       }
 
-      val cetvorostrukaRotacija = kompozicija(nextIsoS)
-      cetvorostrukaRotacija(rect)
+     /* def compositionWithArgument(nextIsoS: Array[(Isometry, Int, Int)]): (MyRectangle,Array[Int]) => MyRectangle = {
+        (x: MyRectangle, arg : Array[Int]) => {
+          useIsometry(x, nextIsoS)
+        }
+      }*/
+
+      val trostrukaRotacija = composition(ec, nextISOS)
+      val ar  = ArrayBuffer[Int](1,2,3)
+      //trostrukaRotacija(rect, ar)
+
+
+      arFunkcije += (("trostrukaRotacija", trostrukaRotacija))
+
+      //val newInputStr = "Oper(x,y,z) = RRotE(0,0) <- trostrukaRotacija(0,z)"// <- RRotE(0,x) <- RRotE(0,x)"
+      //val newInputStr = "Oper(x,y,z) = VerTE(0,30) <- VerTE(0,18) <- HorTE(0,0) <- VerTE(0,5)"
+      //val newInputStr = "Oper(x,y,z) = HorTE(0,0)"
+      val newInputStr = "Oper(x,y) = LDiag(x,y) <- RDiag(x,y)"
+
+      //var arFunkcije = ArrayBuffer[(String, (MyRectangle, ArrayBuffer[Int]) => MyRectangle)]()
+
+      val ecc = new ExpressionController(arFunkcije)
+      ecc.loadExpression(newInputStr)
+      val nextISOSISOS = ecc.makeItReal()
+      print("AAAAAAAAAAAAA " + nextISOSISOS)
+
+      val petorostruka = composition(ecc, nextISOSISOS)
+      val arrr = ArrayBuffer[Int](1, 2, 3)
+      val centralna = ArrayBuffer[Int]((game.height / 2).toInt, (game.width / 2).toInt)
+      petorostruka(rect, centralna)
+
+          //newOP = new Operations(MYGAME, dummyFunction, dummyFunction)
 
         /////////////////////////////////
 
